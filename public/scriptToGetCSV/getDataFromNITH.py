@@ -5,13 +5,26 @@ import csv
 import concurrent.futures
 import threading
 import time
+from pathlib import Path
+
+base_path = Path(__file__).parent
+file_path_csv = (base_path / "../NITResults.csv" ).resolve()
+file_path_rollNumberTxt = (base_path / "./RollNumbersDone.txt")
+file_path_allRollNumber = (base_path / "./AllRollNumber.txt" )
+
 allStudentsTillNow = {}
 csv_writer_lock = threading.Lock()
 outputString = ''
 emailDictionary = {}
 
+# Emptying the rollNumberTxt file so that the file runs
+with open(file_path_rollNumberTxt,'r') as f:
+	f.write("")
+
+
+
+#gives the final results and returns emailOfStudent(No significance of return though)
 def getResultsInCSV(emailOfStudent):
-	print(emailOfStudent)
 	writer = csv.writer(outfile)
 	url = "http://14.139.56.19/scheme"+str(emailOfStudent[:2])+"/studentresult/result.asp"
 	headers = CaseInsensitiveDict()
@@ -23,21 +36,19 @@ def getResultsInCSV(emailOfStudent):
 	html = resp.text
 	parsed_html = BeautifulSoup(html,'lxml')
 
-	# print(url)
-	# print(data)
+	#Below lines are there for scraping the CGPA, SGPA, and numbers grades in subjects 
 	tagsForEverythingExceptMarks=parsed_html.find_all('p',attrs={"style":'float:right;text-align: right; font-weight:bold;'})
 	name = parsed_html.find_all('p', attrs = {"style": "float:right;text-align: right;font-weight:bold;"})
-	arrayForEverythingExceptMarks=[]
 	tagsForIndividualMarks =parsed_html.find_all(lambda tag: tag.name == 'td' and not tag.attrs)
+
+	arrayForEverythingExceptMarks=[]
 	arrayForIndividualMarks=[]
 
-
+	# following lines will append the values to arrays
 	for element in tagsForEverythingExceptMarks:
-		
 		soupa = BeautifulSoup(str(element),'html.parser')
-		# print(soupa.get_text())
 		arrayForEverythingExceptMarks.append(soupa.get_text())
-	
+
 	nameSoup = BeautifulSoup(str(name), 'html.parser')
 	requiredName = nameSoup.get_text()
 
@@ -46,10 +57,9 @@ def getResultsInCSV(emailOfStudent):
 	for element in tagsForIndividualMarks:
 		soupa = BeautifulSoup(str(element),'html.parser')
 		arrayForIndividualMarks.append(soupa.get_text())
-	# print(arrayForEverythingExceptMarks[0])
-	# print(arrayForEverythingExceptMarks[1])
-	# print(arrayForEverythingExceptMarks)
 	arrayForWritingRows = []
+
+	#Check if data is valid by checking if Roll Number and father's name are given 
 	if arrayForEverythingExceptMarks[0] and arrayForEverythingExceptMarks[1]:
 		arrayForWritingRows.append([arrayForEverythingExceptMarks[0],arrayForEverythingExceptMarks[1],arrayForEverythingExceptMarks[-1]])
 		currentIndex=2
@@ -59,7 +69,7 @@ def getResultsInCSV(emailOfStudent):
 			for q in range(6):
 				rowForCSV.append(arrayForIndividualMarks[r*6+q])
 			arrayForWritingRows.append(rowForCSV)
-			
+
 			if (r+1)*6 +1>len(arrayForIndividualMarks):
 				tempArray=[]
 				for x in range(5):
@@ -77,98 +87,67 @@ def getResultsInCSV(emailOfStudent):
 				arrayForWritingRows.append(tempArray)
 				counterForCGPA+=5
 				currentIndex=2
-	
+
 	arrayForWritingRows.append([''])
-	
+
+	#locking since the writerows function is not multithreading safe
 	with csv_writer_lock:
 		writer.writerows(arrayForWritingRows)
-	
+
+
 	emailDictionary[emailOfStudent] = 1
 	return emailOfStudent
 
 emailArray =[]
 
-with open('C:\\Users\\VarunK\\Desktop\\DSA\\QuestionsPython\\AllRollNumber.txt','r') as f:
+with open(file_path_rollNumberTxt,'r') as f:
 	lines = f.read()
 	emailArray =lines.replace('ï»¿','').split(',')
 
+
+
 whatWeWantToLoopOver = []
+isThereChange = False
+with open(file_path_csv, 'w', newline='') as outfile:
+	with open(file_path_rollNumberTxt,'r') as bothfile:
+		data = bothfile.read()
 
-for _ in range(10):
+		emailArray2 =data.replace('ï»¿','').split('\n')
+		emailArray2 = list(filter(('').__ne__, emailArray2))
 
-	with open('C:\\Users\\VarunK\\Desktop\\DSA\\QuestionsPython\\NITResults.csv', 'w', newline='') as outfile:
-		with open('C:\\Users\\VarunK\\Desktop\\DSA\\QuestionsPython\\RollNumbersDone.txt','r') as bothfile:
-			data = bothfile.read()
-
-			emailArray2 =data.replace('ï»¿','').split('\n')
-			if '' in emailArray2:
-				emailArray2.remove('')
-			bothfile.seek(0)
-			# print(emailArray2)
-			
-			
-
-			for r in emailArray2:
-				emailDictionary[r] = 1
-			
-					
-			for email in emailArray:
-				
-				if not email in emailDictionary:
-					whatWeWantToLoopOver.append(email)
-							
+		for r in emailArray2:
+			emailDictionary[r] = 1
 
 
-			with concurrent.futures.ThreadPoolExecutor() as executor:
-				for elementInLoopRequired in whatWeWantToLoopOver:
-					
-					for x in range(10):
-						try :
-							results = executor.submit(getResultsInCSV, elementInLoopRequired)	
-							break
-						except:
-							time.sleep(5)
-							continue
+		for email in emailArray:
 
-				# for result in results:
-				# 		emailDictionary[result] = 1
-						
-					# print(email)
-			
+			if not email in emailDictionary:
+				whatWeWantToLoopOver.append(email)
+
+
+
+		with concurrent.futures.ThreadPoolExecutor() as executor:
+			for elementInLoopRequired in whatWeWantToLoopOver:
+
+				for x in range(10):
+					try :
+						results = executor.submit(getResultsInCSV, elementInLoopRequired)
+						isThereChange = True
+						break
+					except:
+						time.sleep(5)
+						continue
+
+		if isThereChange:
 			for r in emailDictionary:
-				outputString += r	
+				outputString += r
 				outputString += "\n"
-				
-			# print(outputString)
-	with open('C:\\Users\\VarunK\\Desktop\\DSA\\QuestionsPython\\RollNumbersDone.txt','w') as bothfile:
+
+
+if isThereChange:
+	with open(file_path_rollNumberTxt,'w') as bothfile:
 		bothfile.write(outputString)
 
-	time.sleep(5)
-
-		
-
-#getResultsInCSV('21dcs006@nith.ac.in')
-
-	
-
-# 	with concurrent.futures.ThreadPoolExecutor() as executor:
-# 		threadList=[]
-		
-# 		#indexOf182002 = emailArray.index('182002@nith.ac.in')
-# 		for r in range(len(emailArray)):
-# 		# for r in range(100):
-# 			if not emailArray[r].replace('@nith.ac.in','').upper() in forbidenRollNumber:
-# 				if not emailArray[r].replace('@nith.ac.in','').upper() in allStudentsTillNow:
-# 					threadList.append(executor.submit(getResultsInCSV,emailArray[r]))
 
 
-# with open('C:\\Users\\VarunK\\Desktop\\DSA\\QuestionsPython\\NITResults.csv','r') as infile1:
-# 	with open('C:\\Users\\VarunK\\Desktop\\DSA\\QuestionsPython\\NITResultsExp.csv','w',newline='') as outfile1:
-# 		csvReader=csv.reader(infile1)
-# 		writer= csv.writer(outfile1)
-# 		for data in csvReader:
-# 			arrayToWrite=[]
-# 			for x in data:
-# 				arrayToWrite.append(x.strip())
 
-# 			writer.writerow(arrayToWrite)
