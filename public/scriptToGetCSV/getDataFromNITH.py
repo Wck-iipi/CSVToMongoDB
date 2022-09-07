@@ -61,7 +61,7 @@ def getResultsInCSV(emailOfStudent):
 
 	#Check if data is valid by checking if Roll Number and father's name are given 
 	if arrayForEverythingExceptMarks[0] and arrayForEverythingExceptMarks[1]:
-		arrayForWritingRows.append([arrayForEverythingExceptMarks[0],arrayForEverythingExceptMarks[1],arrayForEverythingExceptMarks[-1]])
+		arrayForWritingRows.append([arrayForEverythingExceptMarks[0],arrayForEverythingExceptMarks[1],arrayForEverythingExceptMarks[-1],"NULL","NULL","NULL"])
 		currentIndex=2
 		counterForCGPA=2
 		for r in range(1000):
@@ -88,7 +88,7 @@ def getResultsInCSV(emailOfStudent):
 				counterForCGPA+=5
 				currentIndex=2
 
-	arrayForWritingRows.append([''])
+	arrayForWritingRows.append(['NewLine','NewLine','NewLine','NewLine','NewLine','NewLine'])
 
 	#locking since the writerows function is not multithreading safe
 	with csv_writer_lock:

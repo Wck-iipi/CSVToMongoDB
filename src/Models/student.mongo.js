@@ -13,6 +13,10 @@ const studentSchema = new mongoose.Schema({
     required: true,
   },
   cgpa: {
+    type: [ Number ],
+    required: true,
+  },
+  cgpaTotal:{
     type: Number,
     required: true,
   },
