@@ -16,4 +16,4 @@ async function mongoConnect() {
   });
 }
 
-module.exports = mongoConnect;
+module.exports = {mongoConnect};
