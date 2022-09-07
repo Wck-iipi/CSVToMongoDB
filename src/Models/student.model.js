@@ -1,14 +1,17 @@
 const fs = require('fs');
 const path = require('path');
+const toArrayPackage = require('stream-to-array');
 const studentDatabase = require('./student.mongo');
 
 async function addNewStudent(array) {
-  let currentObject = {}
+
+  let currentObject = {};
   try{
 
     for (var i = 0; i < array.length; i++) {
 
       if (array[i][3] == "NULL") {
+
         currentObject["grade"] = [];
         currentObject["name"] = array[i][2].trim();
         currentObject["rollNumber"] = array[i][0].trim();
@@ -42,7 +45,13 @@ async function addNewStudent(array) {
 
 
       else if (array[i][1] == "NewLine"){
-        currentObject["cgpaTotal"] = parseFloat(array[i-1][3].split("=")[1]);
+
+        if (parseFloat(array[i-1][3].split("=")[1]) === NaN) {
+          currentObject["cgpaTotal"] = 0;
+        }else{
+
+          currentObject["cgpaTotal"] = parseFloat(array[i-1][3].split("=")[1]);
+        }
 
         // console.log(currentObject);
         await insertDataInDatabase(currentObject);
@@ -55,6 +64,7 @@ async function addNewStudent(array) {
       }
 
     }
+
 
   } catch(err) {
     console.log("Error in database; "+ err);
@@ -75,20 +85,47 @@ async function insertDataInDatabase(studentObject) {
 }
 
 async function loadStudentsData() {
-  return new Promise((resolve, reject) => {
-    fs.createReadStream(path.join(__dirname, '..', '..', 'public', 'NITResults.csv'))
-    .on('data', async (data) => {
+  return new Promise(async (resolve, reject) => {
+    fs.readFile(path.join(__dirname, '..', '..', 'public', 'NITResults.csv'),async (err, data) =>{
+    if (err) {
+        throw err;
+    }
+    const content = "" +data;
+    // console.log(content);
+    let array = CSVToArray(content);
+    await addNewStudent(array);
+    console.log("I am finished");
 
-      let array = CSVToArray((""+data));
-      await addNewStudent(array);
-    })
-    .on('err', (err) => {
-      console.log(err);
-    })
-    .on('end', async () => {
-      console.log("The entire process ended successfully.");
     });
-
   });
+
+
+
+
+    // var parse = fs.createReadStream(path.join(__dirname, '..', '..', 'public', 'NITResults.csv'))
+    // .on('data', async (data) => {
+    //   // parse.pause();
+    //   // let array = CSVToArray((""+data));
+    //   // await addNewStudent(array);
+    //   // parse.resume();
+    //   // this.toArrayPackage((err,arr) => {
+    //   //   addNewStudent(arr);
+    //   // });
+    // })
+    // .on('err', (err) => {
+    //   console.log("loadStudentsData errror" + err);
+    // })
+    // .on('end', async () => {
+    //   console.log("The entire process ended successfully.");
+    // });
+
+    // const parts = await toArrayPackage(fs.createReadStream(path.join(__dirname, '..', '..', 'public', 'NITResults.csv')));
+    // // const buffers = parts.map(
+    // //  part => (_.isBuffer(part) ? part : Buffer.from(part)),
+    // // );
+    // //
+    // // const buffer = Buffer.concat(buffers);
+    // // arr = [...parts]
+    // // console.log(""+parts);
 }
 module.exports = {loadStudentsData};
