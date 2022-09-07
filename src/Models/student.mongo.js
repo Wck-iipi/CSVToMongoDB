@@ -29,7 +29,7 @@ const studentSchema = new mongoose.Schema({
     required: true,
   },
   grade: {
-    type: [ String ],
+    type: [[ String ]],
     required: true,
   }
 });
