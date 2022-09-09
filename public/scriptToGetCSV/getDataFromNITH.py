@@ -14,12 +14,7 @@ file_path_allRollNumber = (base_path / "./AllRollNumber.txt" )
 
 allStudentsTillNow = {}
 csv_writer_lock = threading.Lock()
-outputString = ''
-emailDictionary = {}
 
-# Emptying the rollNumberTxt file so that the file runs
-with open(file_path_rollNumberTxt,'r') as f:
-	f.write("")
 
 
 
@@ -95,59 +90,36 @@ def getResultsInCSV(emailOfStudent):
 		writer.writerows(arrayForWritingRows)
 
 
-	emailDictionary[emailOfStudent] = 1
+	
 	return emailOfStudent
 
 emailArray =[]
 
-with open(file_path_rollNumberTxt,'r') as f:
+with open(file_path_allRollNumber,'r') as f:
 	lines = f.read()
 	emailArray =lines.replace('ï»¿','').split(',')
 
 
-
-whatWeWantToLoopOver = []
 isThereChange = False
 with open(file_path_csv, 'w', newline='') as outfile:
-	with open(file_path_rollNumberTxt,'r') as bothfile:
-		data = bothfile.read()
+	
+	whatWeWantToLoopOver = []
 
-		emailArray2 =data.replace('ï»¿','').split('\n')
-		emailArray2 = list(filter(('').__ne__, emailArray2))
-
-		for r in emailArray2:
-			emailDictionary[r] = 1
-
-
-		for email in emailArray:
-
-			if not email in emailDictionary:
-				whatWeWantToLoopOver.append(email)
+	for email in emailArray:
+		whatWeWantToLoopOver.append(email)
 
 
 
-		with concurrent.futures.ThreadPoolExecutor() as executor:
-			for elementInLoopRequired in whatWeWantToLoopOver:
+	with concurrent.futures.ThreadPoolExecutor() as executor:
+		for elementInLoopRequired in whatWeWantToLoopOver:
 
-				for x in range(10):
-					try :
-						results = executor.submit(getResultsInCSV, elementInLoopRequired)
-						isThereChange = True
-						break
-					except:
-						time.sleep(5)
-						continue
-
-		if isThereChange:
-			for r in emailDictionary:
-				outputString += r
-				outputString += "\n"
-
-
-if isThereChange:
-	with open(file_path_rollNumberTxt,'w') as bothfile:
-		bothfile.write(outputString)
-
+			for x in range(10):
+				try :
+					results = executor.submit(getResultsInCSV, elementInLoopRequired)
+					break
+				except:
+					time.sleep(5)
+					continue
 
 
 
