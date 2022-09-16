@@ -23,7 +23,9 @@ const studentSchema = new mongoose.Schema({
   },
   grade: {
     type: [ String ],
-
+  },
+  cumulativePoints: {
+    type: [ Number ],
   }
 });
 module.exports = mongoose.model("student", studentSchema);

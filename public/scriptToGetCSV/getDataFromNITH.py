@@ -6,6 +6,7 @@ import concurrent.futures
 import threading
 import time
 from pathlib import Path
+import time
 
 base_path = Path(__file__).parent
 file_path_csv = (base_path / "../NITResults.csv" ).resolve()
@@ -16,18 +17,25 @@ allStudentsTillNow = {}
 csv_writer_lock = threading.Lock()
 
 
-
-
 #gives the final results and returns emailOfStudent(No significance of return though)
 def getResultsInCSV(emailOfStudent):
-	writer = csv.writer(outfile)
+
+	start = time.time()
+	#Follows: ["name", "rollNumber", "fatherName", "cgpa", "cgpaTotal", "sgpa", "year", "grade", "cumulativePointsSemester"]
+	arrayToBeAddedToCSV = ['' for x in range(9)]
+
+	arrayToBeAddedToCSV[3] = []
+	arrayToBeAddedToCSV[5] = []
+	arrayToBeAddedToCSV[7] = {}
+	arrayToBeAddedToCSV[8] = []
+
 	url = "http://14.139.56.19/scheme"+str(emailOfStudent[:2])+"/studentresult/result.asp"
 	headers = CaseInsensitiveDict()
 	headers["Content-Type"] = "application/x-www-form-urlencoded"
 
-	data = "RollNumber="+str(str(emailOfStudent).replace('@nith.ac.in',''))
+	rollNumberString = "RollNumber="+str(str(emailOfStudent).replace('@nith.ac.in',''))
 
-	resp = requests.post(url, headers = headers, data = data)
+	resp = requests.post(url, headers = headers, data = rollNumberString)
 	html = resp.text
 	parsed_html = BeautifulSoup(html,'lxml')
 
@@ -40,55 +48,73 @@ def getResultsInCSV(emailOfStudent):
 	arrayForIndividualMarks=[]
 
 	# following lines will append the values to arrays
-	for element in tagsForEverythingExceptMarks:
-		soupa = BeautifulSoup(str(element),'html.parser')
-		arrayForEverythingExceptMarks.append(soupa.get_text())
+	for r in range(len(tagsForEverythingExceptMarks)):
+		soupa = BeautifulSoup(str(tagsForEverythingExceptMarks[r]),'html.parser')
+		arrayForEverythingExceptMarks.append(soupa.get_text().strip())
+
 
 	nameSoup = BeautifulSoup(str(name), 'html.parser')
 	requiredName = nameSoup.get_text()
+	arrayToBeAddedToCSV[0] = requiredName.strip('[ ]')
 
-	arrayForEverythingExceptMarks.append(requiredName.replace('[', '').replace(']','').strip())
+	
 
 	for element in tagsForIndividualMarks:
 		soupa = BeautifulSoup(str(element),'html.parser')
-		arrayForIndividualMarks.append(soupa.get_text())
-	arrayForWritingRows = []
+		arrayForIndividualMarks.append(soupa.get_text().strip())
+	
+	# print(arrayForEverythingExceptMarks)
+	
 
-	#Check if data is valid by checking if Roll Number and father's name are given 
-	if arrayForEverythingExceptMarks[0] and arrayForEverythingExceptMarks[1]:
-		arrayForWritingRows.append([arrayForEverythingExceptMarks[0],arrayForEverythingExceptMarks[1],arrayForEverythingExceptMarks[-1],"NULL","NULL","NULL"])
-		currentIndex=2
-		counterForCGPA=2
-		for r in range(1000):
-			rowForCSV=[]
-			for q in range(6):
-				rowForCSV.append(arrayForIndividualMarks[r*6+q])
-			arrayForWritingRows.append(rowForCSV)
+	#assigns rollNumber
+	arrayToBeAddedToCSV[1] = arrayForEverythingExceptMarks[0]
+	#assigns fatherName
+	arrayToBeAddedToCSV[2] = arrayForEverythingExceptMarks[1]
+	
+	# print(arrayForEverythingExceptMarks)
+	for r in range(2,len(arrayForEverythingExceptMarks)):
+		# here 5 is when the data gets for new array(is fixed)
+		
+		if r % 5 == 2:
+			arrayToBeAddedToCSV[7][int(arrayForEverythingExceptMarks[r][1:3])] = {}
+		elif r % 5 == 3:
+			arrayToBeAddedToCSV[5].append(float(arrayForEverythingExceptMarks[r].split('=')[1]))
+		elif r % 5 == 4:
+			arrayToBeAddedToCSV[8].append(float(arrayForEverythingExceptMarks[r]))
+		elif r % 5 == 0:
+			arrayToBeAddedToCSV[3].append(float(arrayForEverythingExceptMarks[r].split('=')[1]))
+	
+	arrayToBeAddedToCSV[4] = float(arrayForEverythingExceptMarks[-2].split('=')[1])
 
-			if (r+1)*6 +1>len(arrayForIndividualMarks):
-				tempArray=[]
-				for x in range(5):
-					tempArray.append(arrayForEverythingExceptMarks[counterForCGPA+x])
-				arrayForWritingRows.append(tempArray)
-				counterForCGPA+=5
-				break
+	if arrayToBeAddedToCSV[1][2].lower() == 'b':
+		arrayToBeAddedToCSV[6] = arrayToBeAddedToCSV[1][:3].lower()
+	else:
+		arrayToBeAddedToCSV[6] = arrayToBeAddedToCSV[1][:2]
 
-			if(int(arrayForIndividualMarks[(r+1)*6])==currentIndex):
-				currentIndex+=1
-			else:
-				tempArray=[]
-				for x in range(5):
-					tempArray.append(arrayForEverythingExceptMarks[counterForCGPA+x])
-				arrayForWritingRows.append(tempArray)
-				counterForCGPA+=5
-				currentIndex=2
 
-	arrayForWritingRows.append(['NewLine','NewLine','NewLine','NewLine','NewLine','NewLine'])
 
+	numberEncountered = 0
+	currentSem = 1
+	for r in range(len(arrayForIndividualMarks)):
+		if r % 6 == 0:
+			if int(arrayForIndividualMarks[r]) < numberEncountered:
+				currentSem += 1
+				numberEncountered = 0
+			else : 
+				numberEncountered += 1
+
+		if r % 6 == 1:
+			arrayToBeAddedToCSV[7][currentSem][arrayForIndividualMarks[r]] =arrayForIndividualMarks[r+1: r+5] 
+
+	# print(arrayToBeAddedToCSV)
 	#locking since the writerows function is not multithreading safe
+	start1 = time.time()
 	with csv_writer_lock:
-		writer.writerows(arrayForWritingRows)
+		writer.writerow(arrayToBeAddedToCSV)
 
+	end = time.time()
+	
+	print(f"Current thread {threading.get_ident()} : Start Time :{start1-start}, End Time: {end-start1}")
 
 	
 	return emailOfStudent
@@ -102,7 +128,8 @@ with open(file_path_allRollNumber,'r') as f:
 
 isThereChange = False
 with open(file_path_csv, 'w', newline='') as outfile:
-	
+	writer = csv.writer(outfile)
+	writer.writerow(["name", "rollNumber", "fatherName", "cgpa", "cgpaTotal", "sgpa", "year", "grade", "cumulativePointsSemester"])
 	whatWeWantToLoopOver = []
 
 	for email in emailArray:
@@ -120,6 +147,5 @@ with open(file_path_csv, 'w', newline='') as outfile:
 				except:
 					time.sleep(5)
 					continue
-
 
 
