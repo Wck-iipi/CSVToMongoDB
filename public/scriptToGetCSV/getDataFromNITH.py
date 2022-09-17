@@ -76,7 +76,7 @@ def getResultsInCSV(emailOfStudent):
 		# here 5 is when the data gets for new array(is fixed)
 		
 		if r % 5 == 2:
-			arrayToBeAddedToCSV[7][int(arrayForEverythingExceptMarks[r][1:3])] = {}
+			arrayToBeAddedToCSV[7][str(int(arrayForEverythingExceptMarks[r][1:3]))] = {}
 		elif r % 5 == 3:
 			arrayToBeAddedToCSV[5].append(float(arrayForEverythingExceptMarks[r].split('=')[1]))
 		elif r % 5 == 4:
@@ -86,7 +86,7 @@ def getResultsInCSV(emailOfStudent):
 	
 	arrayToBeAddedToCSV[4] = float(arrayForEverythingExceptMarks[-2].split('=')[1])
 
-	if arrayToBeAddedToCSV[1][2].lower() == 'b':
+	if arrayToBeAddedToCSV[1][2].lower() == 'b' or arrayToBeAddedToCSV[1][2].lower() == 'd':
 		arrayToBeAddedToCSV[6] = arrayToBeAddedToCSV[1][:3].lower()
 	else:
 		arrayToBeAddedToCSV[6] = arrayToBeAddedToCSV[1][:2]
@@ -104,7 +104,7 @@ def getResultsInCSV(emailOfStudent):
 				numberEncountered += 1
 
 		if r % 6 == 1:
-			arrayToBeAddedToCSV[7][currentSem][arrayForIndividualMarks[r]] =arrayForIndividualMarks[r+1: r+5] 
+			arrayToBeAddedToCSV[7][str(currentSem)][arrayForIndividualMarks[r]] =arrayForIndividualMarks[r+1: r+5] 
 
 	# print(arrayToBeAddedToCSV)
 	#locking since the writerows function is not multithreading safe

@@ -22,9 +22,9 @@ const studentSchema = new mongoose.Schema({
     type: String,
   },
   grade: {
-    type: [ String ],
+    type: mongoose.Schema.Types.Mixed,
   },
-  cumulativePoints: {
+  cumulativePointsSemester: {
     type: [ Number ],
   }
 });
