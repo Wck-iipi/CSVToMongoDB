@@ -21,7 +21,7 @@
   "homepage": "https://github.com/Wck-iipi/CSVToMongoDB#readme",
   "dependencies": {
     "csv-parse": "^5.3.0",
-    "mongoose": "^6.5.4",
+    "mongoose": "^6.11.3",
     "stream-to-array": "^2.3.0"
   },
   "devDependencies": {
